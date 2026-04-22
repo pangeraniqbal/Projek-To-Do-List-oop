@@ -98,7 +98,7 @@ public class mainForm extends javax.swing.JFrame {
                 tambahActionPerformed(evt);
             }
         });
-
+        System.out.println("tegar gacor 123"); //hapus ini setelah itu
         hapus.setBackground(new java.awt.Color(102, 51, 0));
         hapus.setForeground(new java.awt.Color(255, 255, 255));
         hapus.setText("🗑 Hapus");
