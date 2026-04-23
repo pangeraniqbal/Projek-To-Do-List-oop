@@ -4,6 +4,7 @@ import java.awt.Font;
 import java.awt.GridLayout;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
@@ -190,5 +191,19 @@ public class UIComponents {
         panel.add(new JLabel("Deadline (dd/MM/yyyy):"));
         panel.add(inputDeadline);
         return panel;
+    }
+
+    // Nambah ui kategori
+    public static final String[] KATEGORI = {
+        "Kuliah", "Pribadi", "Kerja", "Belanja", "Kesehatan", "Umum"
+    };
+    public static JComboBox<String> createCategoryComboBox() {
+        return new JComboBox<>(KATEGORI);
+    }
+    public static JLabel createCategoryLabel() {
+        JLabel label = new JLabel();
+        label.setFont(new Font("Segoe UI", Font.ITALIC, 14));
+        label.setForeground(COLOR_TEAL);
+        return label;
     }
 }

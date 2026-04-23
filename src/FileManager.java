@@ -13,6 +13,7 @@ public class FileManager {
 
     private static final String TASK_FILE     = "data-tugas.txt";
     private static final String DEADLINE_FILE = "deadline.txt";
+    private static final String CATEGORY_FILE = "kategori.txt";
 
     private final TaskManager taskManager;
 
@@ -50,6 +51,38 @@ public class FileManager {
         }
     }
 
+    // Method load kategorinye
+    public void loadCategories() {
+    File file = new File(CATEGORY_FILE);
+    if (!file.exists()) {
+        for (int i = 0; i < taskManager.getTaskModel().getSize(); i++) {
+            taskManager.getCategoryModel().addElement("Umum");
+        }
+        return;
+    }
+    try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+        String line;
+        while ((line = reader.readLine()) != null) {
+            taskManager.getCategoryModel().addElement(line);
+        }
+    } 
+    catch (IOException e) {
+        showError("Gagal memuat kategori: " + e.getMessage());
+    }
+    }
+
+    // Method sevv
+    public void saveCategories() {
+    try (BufferedWriter writer = new BufferedWriter(new FileWriter(CATEGORY_FILE))) {
+        for (int i = 0; i < taskManager.getCategoryModel().getSize(); i++) {
+            writer.write(taskManager.getCategoryModel().getElementAt(i));
+            writer.newLine();
+        }
+    } catch (IOException e) {
+        showError("Gagal menyimpan kategori: " + e.getMessage());
+    }
+    }
+
     /** Save all task names to file. */
     public void saveTasks() {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(TASK_FILE))) {
@@ -78,6 +111,7 @@ public class FileManager {
     public void saveAll() {
         saveTasks();
         saveDeadlines();
+        saveCategories(); // sev kategori
     }
 
     private void showError(String message) {
