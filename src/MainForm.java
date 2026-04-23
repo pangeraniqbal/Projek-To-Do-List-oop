@@ -27,6 +27,8 @@ public class MainForm extends JFrame {
     private final JButton hapusButton   = UIComponents.createHapusButton();
     private final JButton startButton   = UIComponents.createStartButton();
     private final JButton editButton    = UIComponents.createEditButton();
+    // Nambah kategori tadi
+    private final JLabel categoryLabel = UIComponents.createCategoryLabel();
 
     // ── Date format ───────────────────────────────────────────────────────────
     private static final DateTimeFormatter DATE_FORMAT =
@@ -43,6 +45,7 @@ public class MainForm extends JFrame {
         // Load persisted data
         fileManager.loadTasks();
         fileManager.loadDeadlines();
+        fileManager.loadCategories(); // Sekali lagi......f kategori
 
         // Build layout
         buildLayout();
@@ -69,6 +72,7 @@ public class MainForm extends JFrame {
 
         // Deadline strip
         deadlinePanel.add(deadlineLabel);
+        deadlinePanel.add(categoryLabel); // Ya u know lah
 
         // Button grid (2 × 2)
         JPanel buttonPanel = new JPanel(new java.awt.GridLayout(2, 2, 10, 10));
@@ -108,8 +112,10 @@ public class MainForm extends JFrame {
             int idx = taskList.getSelectedIndex();
             if (idx != -1 && idx < taskManager.getDeadlineModel().getSize()) {
                 deadlineLabel.setText("Deadline : " + taskManager.getDeadline(idx));
+                categoryLabel.setText("Kategori : " + taskManager.getCategory(idx)); // Kategori
             } else {
                 deadlineLabel.setText("");
+                categoryLabel.setText(""); // Jenis lah biar agak beda
             }
         });
 
@@ -126,7 +132,16 @@ public class MainForm extends JFrame {
     private void onTambah() {
         JTextField inputKegiatan = new JTextField();
         JTextField inputDeadline = new JTextField();
-        JPanel panel = UIComponents.createAddTaskPanel(inputKegiatan, inputDeadline);
+        // JPanel panel = UIComponents.createAddTaskPanel(inputKegiatan, inputDeadline);
+        // Nambahin buat kategori ye
+        JComboBox<String> kategoriBox = UIComponents.createCategoryComboBox();  
+        JPanel panel = new JPanel(new java.awt.GridLayout(3, 2, 5, 5));
+        panel.add(new JLabel("Nama Kegiatan:"));
+        panel.add(inputKegiatan);
+        panel.add(new JLabel("Deadline (dd/MM/yyyy):"));
+        panel.add(inputDeadline);
+        panel.add(new JLabel("Kategori:"));
+        panel.add(kategoriBox);
 
         int result = JOptionPane.showConfirmDialog(
                 this, panel, "Tambah Tugas Baru",
@@ -146,7 +161,9 @@ public class MainForm extends JFrame {
         String parsedDeadline = parseDeadline(deadlineInput);
         if (parsedDeadline == null) return;
 
-        taskManager.addTask(kegiatan, parsedDeadline);
+        // taskManager.addTask(kegiatan, parsedDeadline);
+        String kategori = (String) kategoriBox.getSelectedItem();
+        taskManager.addTask(kegiatan, parsedDeadline, kategori);
         fileManager.saveAll();
     }
 
@@ -163,6 +180,7 @@ public class MainForm extends JFrame {
         taskManager.removeTask(index);
         fileManager.saveAll();
         deadlineLabel.setText("");
+        categoryLabel.setText(""); // Hapus kategori
     }
 
     private void onEdit() {
@@ -177,6 +195,7 @@ public class MainForm extends JFrame {
 
         String currentTask     = taskManager.getTask(index);
         String currentDeadline = taskManager.getDeadline(index);
+        String currentCategory = taskManager.getCategory(index); // Kategori lagii
 
         String newTask = JOptionPane.showInputDialog(this, "Edit tugas:", currentTask);
         if (newTask == null || newTask.trim().isEmpty()) return;
@@ -188,8 +207,21 @@ public class MainForm extends JFrame {
         String parsedDeadline = parseDeadline(newDeadlineInput.trim());
         if (parsedDeadline == null) return;
 
-        taskManager.editTask(index, newTask.trim(), parsedDeadline);
+        // Dialog Kategori
+        JComboBox<String> kategoriBox = UIComponents.createCategoryComboBox();
+        kategoriBox.setSelectedItem(currentCategory);
+
+        int resultKategori = JOptionPane.showConfirmDialog(
+                this, kategoriBox, "Pilih Kategori",
+                JOptionPane.OK_CANCEL_OPTION);
+        
+        if (resultKategori != JOptionPane.OK_OPTION) return;
+        
+        String newCategory = (String) kategoriBox.getSelectedItem();    
+
+        taskManager.editTask(index, newTask.trim(), parsedDeadline, newCategory);
         deadlineLabel.setText("Deadline : " + parsedDeadline);
+        categoryLabel.setText("Kategori : " + newCategory);
         fileManager.saveAll();
     }
 
