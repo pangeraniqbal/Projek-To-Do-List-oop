@@ -45,6 +45,10 @@ public class MainForm extends JFrame {
         "Start", 20,
         new Color(60, 150, 90), new Color(80, 180, 110), new Color(45, 125, 70)
     );
+    private final UIComponents.ModernButton logoutButton = new UIComponents.ModernButton(
+        "Logout", 14,
+        new Color(180, 70, 70), new Color(210, 90, 90), new Color(150, 50, 50)
+    );
     private final JComboBox<String> filterKategori = new JComboBox<>();
 
     // ── Date format ───────────────────────────────────────────────────────────
@@ -112,8 +116,19 @@ public class MainForm extends JFrame {
         );
         userLabel.setHorizontalAlignment(SwingConstants.RIGHT);
 
+        // Logout button styling
+        logoutButton.setPreferredSize(new Dimension(90, 32));
+        logoutButton.setMaximumSize(new Dimension(90, 32));
+
+        // Panel untuk user dan logout button
+        JPanel headerRightPanel = new JPanel();
+        headerRightPanel.setOpaque(false);
+        headerRightPanel.setLayout(new FlowLayout(FlowLayout.RIGHT, 12, 0));
+        headerRightPanel.add(userLabel);
+        headerRightPanel.add(logoutButton);
+
         headerPanel.add(titleLabel, BorderLayout.WEST);
-        headerPanel.add(userLabel, BorderLayout.EAST);
+        headerPanel.add(headerRightPanel, BorderLayout.EAST);
 
         // ── CENTER: Task list card ────────────────────────────────────────────
         UIComponents.ModernShadowPanel listCard = new UIComponents.ModernShadowPanel(
@@ -225,6 +240,7 @@ public class MainForm extends JFrame {
         hapusButton.addActionListener(e  -> onHapus());
         editButton.addActionListener(e   -> onEdit());
         startButton.addActionListener(e  -> onStart());
+        logoutButton.addActionListener(e -> onLogout());
         filterKategori.addActionListener(e -> applyFilter());
 
         taskList.addListSelectionListener(e -> {
@@ -355,6 +371,23 @@ public class MainForm extends JFrame {
         PomodoroForm pomodoro = new PomodoroForm(index, this);
         pomodoro.setVisible(true);
         setVisible(false);
+    }
+
+    private void onLogout() {
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Apakah Anda yakin ingin logout?",
+                "Konfirmasi Logout", JOptionPane.YES_NO_OPTION);
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            // Simpan semua data sebelum logout
+            fileManager.saveAll();
+            
+            // Buka LoginForm baru
+            new LoginForm().setVisible(true);
+            
+            // Tutup MainForm
+            this.dispose();
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
