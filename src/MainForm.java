@@ -1,3 +1,4 @@
+import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.time.LocalDate;
@@ -11,41 +12,59 @@ import javax.swing.*;
  *  - Assemble UI components (via UIComponents)
  *  - Wire up button actions
  *  - Delegate data operations to TaskManager & FileManager
+ *  - Support per-user data isolation via username
  */
+
 public class MainForm extends JFrame {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
-    private final TaskManager taskManager  = new TaskManager();
-    private final FileManager fileManager  = new FileManager(taskManager);
+    private final TaskManager taskManager   = new TaskManager();
+    private final FileManager fileManager;
     private final SoundManager soundManager = new SoundManager();
+    private final String username;
 
     // ── UI components ─────────────────────────────────────────────────────────
     private final JList<String> taskList    = UIComponents.createTaskList();
     private final JLabel deadlineLabel      = UIComponents.createDeadlineLabel();
+    private final JLabel categoryLabel      = UIComponents.createCategoryLabel();
 
-    private final JButton tambahButton  = UIComponents.createTambahButton();
-    private final JButton hapusButton   = UIComponents.createHapusButton();
-    private final JButton startButton   = UIComponents.createStartButton();
-    private final JButton editButton    = UIComponents.createEditButton();
-    // Nambah kategori tadi
-    private final JLabel categoryLabel = UIComponents.createCategoryLabel();
+    // Modern buttons (pakai ModernButton dari UIComponents)
+    private final UIComponents.ModernButton tambahButton = new UIComponents.ModernButton(
+        "Tambah", 20,
+        new Color(101, 77, 100), new Color(130, 100, 130), new Color(80, 57, 80)
+    );
+    private final UIComponents.ModernButton hapusButton = new UIComponents.ModernButton(
+        "Hapus", 20,
+        new Color(180, 70, 70), new Color(210, 90, 90), new Color(150, 50, 50)
+    );
+    private final UIComponents.ModernButton editButton = new UIComponents.ModernButton(
+        "Edit", 20,
+        new Color(60, 120, 160), new Color(80, 150, 190), new Color(45, 100, 140)
+    );
+    private final UIComponents.ModernButton startButton = new UIComponents.ModernButton(
+        "Start", 20,
+        new Color(60, 150, 90), new Color(80, 180, 110), new Color(45, 125, 70)
+    );
 
     // ── Date format ───────────────────────────────────────────────────────────
     private static final DateTimeFormatter DATE_FORMAT =
             DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-    // ── Constructor ───────────────────────────────────────────────────────────
-    public MainForm() {
-        setTitle("To-Do-List");
+    // ── Constructor (dengan username untuk per-user data) ─────────────────────
+    public MainForm(String username) {
+        this.username = username;
+        this.fileManager = new FileManager(taskManager, username);
+
+        setTitle("To-Do-List — " + username);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
         // Attach models
         taskList.setModel(taskManager.getTaskModel());
 
-        // Load persisted data
+        // Load persisted data (per-user)
         fileManager.loadTasks();
         fileManager.loadDeadlines();
-        fileManager.loadCategories(); // Sekali lagi......f kategori
+        fileManager.loadCategories();
 
         // Build layout
         buildLayout();
@@ -57,47 +76,134 @@ public class MainForm extends JFrame {
         setLocationRelativeTo(null);
     }
 
+    /** Backward-compatible no-arg constructor (default user). */
+    public MainForm() {
+        this("user");
+    }
+
     // ── Layout ────────────────────────────────────────────────────────────────
 
     private void buildLayout() {
-        JPanel mainPanel   = UIComponents.createMainPanel();
-        JPanel headerPanel = UIComponents.createHeaderPanel();
-        JPanel deadlinePanel = UIComponents.createDeadlinePanel();
+        // Background utama: gradient vertikal seperti LoginForm
+        UIComponents.ModernGradientVerPanel mainBackground = new UIComponents.ModernGradientVerPanel(
+            0,
+            new Color(230, 210, 220),
+            new Color(150, 120, 150)
+        );
+        mainBackground.setLayout(new BorderLayout(0, 0));
+        mainBackground.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        JLabel titleLabel  = UIComponents.createTitleLabel();
+        // ── HEADER ────────────────────────────────────────────────────────────
+        UIComponents.ModernGradientHorPanel headerPanel = new UIComponents.ModernGradientHorPanel(
+            20,
+            new Color(101, 77, 100),
+            new Color(60, 40, 70)
+        );
+        headerPanel.setLayout(new BorderLayout());
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(14, 24, 14, 24));
+        headerPanel.setPreferredSize(new Dimension(0, 80));
+
+        UIComponents.ModernLabel titleLabel = new UIComponents.ModernLabel(
+            "📋  To-Do-List", 32, true, Color.WHITE
+        );
+        UIComponents.ModernLabel userLabel = new UIComponents.ModernLabel(
+            "👤  " + username, 14, false, new Color(220, 200, 220)
+        );
+        userLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+
+        headerPanel.add(titleLabel, BorderLayout.WEST);
+        headerPanel.add(userLabel, BorderLayout.EAST);
+
+        // ── CENTER: Task list card ────────────────────────────────────────────
+        UIComponents.ModernShadowPanel listCard = new UIComponents.ModernShadowPanel(
+            20, 12, new Color(255, 250, 255)
+        );
+        listCard.setLayout(new BorderLayout());
+        listCard.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+
+        // Style task list
+        taskList.setFont(new Font("Segoe UI", Font.PLAIN, 18));
+        taskList.setBackground(new Color(255, 250, 255));
+        taskList.setSelectionBackground(new Color(180, 140, 180));
+        taskList.setSelectionForeground(Color.WHITE);
+        taskList.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+
         JScrollPane scrollPane = UIComponents.createScrollPane(taskList);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.getViewport().setBackground(new Color(255, 250, 255));
 
-        // Header
-        headerPanel.add(titleLabel);
+        listCard.add(scrollPane, BorderLayout.CENTER);
 
-        // Deadline strip
-        deadlinePanel.add(deadlineLabel);
-        deadlinePanel.add(categoryLabel); // Ya u know lah
-
-        // Button grid (2 × 2)
-        JPanel buttonPanel = new JPanel(new java.awt.GridLayout(2, 2, 10, 10));
-        buttonPanel.setOpaque(false);
-        buttonPanel.add(tambahButton);
-        buttonPanel.add(hapusButton);
-        buttonPanel.add(editButton);
-        buttonPanel.add(startButton);
-
-        // Left column
+        // ── WEST: Buttons + info panel ────────────────────────────────────────
         JPanel leftPanel = new JPanel();
         leftPanel.setOpaque(false);
-        leftPanel.setLayout(new javax.swing.BoxLayout(leftPanel, javax.swing.BoxLayout.Y_AXIS));
-        leftPanel.add(buttonPanel);
-        leftPanel.add(javax.swing.Box.createVerticalStrut(16));
-        leftPanel.add(deadlinePanel);
+        leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.Y_AXIS));
+        leftPanel.setPreferredSize(new Dimension(200, 0));
+        leftPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 16));
 
-        // Assemble main panel
-        mainPanel.setLayout(new java.awt.BorderLayout(20, 10));
-        mainPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(16, 20, 16, 20));
-        mainPanel.add(headerPanel, java.awt.BorderLayout.NORTH);
-        mainPanel.add(scrollPane, java.awt.BorderLayout.CENTER);
-        mainPanel.add(leftPanel, java.awt.BorderLayout.WEST);
+        // Tombol-tombol (ModernButton, full width di kolom kiri)
+        Dimension btnSize = new Dimension(180, 44);
+        tambahButton.setPreferredSize(btnSize);
+        tambahButton.setMaximumSize(btnSize);
+        tambahButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        setContentPane(mainPanel);
+        hapusButton.setPreferredSize(btnSize);
+        hapusButton.setMaximumSize(btnSize);
+        hapusButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        editButton.setPreferredSize(btnSize);
+        editButton.setMaximumSize(btnSize);
+        editButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        startButton.setPreferredSize(btnSize);
+        startButton.setMaximumSize(btnSize);
+        startButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        leftPanel.add(tambahButton);
+        leftPanel.add(Box.createVerticalStrut(10));
+        leftPanel.add(hapusButton);
+        leftPanel.add(Box.createVerticalStrut(10));
+        leftPanel.add(editButton);
+        leftPanel.add(Box.createVerticalStrut(10));
+        leftPanel.add(startButton);
+        leftPanel.add(Box.createVerticalStrut(20));
+
+        // Info card: deadline + kategori
+        UIComponents.ModernShadowPanel infoCard = new UIComponents.ModernShadowPanel(
+            16, 10, new Color(240, 230, 245)
+        );
+        infoCard.setLayout(new BoxLayout(infoCard, BoxLayout.Y_AXIS));
+        infoCard.setBorder(BorderFactory.createEmptyBorder(12, 14, 12, 14));
+        infoCard.setPreferredSize(new Dimension(180, 90));
+        infoCard.setMaximumSize(new Dimension(180, 90));
+        infoCard.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        deadlineLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        deadlineLabel.setForeground(new Color(80, 50, 80));
+        deadlineLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        categoryLabel.setFont(new Font("Segoe UI", Font.ITALIC, 13));
+        categoryLabel.setForeground(new Color(101, 77, 100));
+        categoryLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        infoCard.add(deadlineLabel);
+        infoCard.add(Box.createVerticalStrut(6));
+        infoCard.add(categoryLabel);
+
+        leftPanel.add(infoCard);
+
+        // ── CENTER wrapper ────────────────────────────────────────────────────
+        JPanel centerWrapper = new JPanel(new BorderLayout(16, 0));
+        centerWrapper.setOpaque(false);
+        centerWrapper.setBorder(BorderFactory.createEmptyBorder(16, 0, 0, 0));
+        centerWrapper.add(leftPanel, BorderLayout.WEST);
+        centerWrapper.add(listCard, BorderLayout.CENTER);
+
+        mainBackground.add(headerPanel, BorderLayout.NORTH);
+        mainBackground.add(centerWrapper, BorderLayout.CENTER);
+
+        setContentPane(mainBackground);
+        setPreferredSize(new Dimension(720, 480));
     }
 
     // ── Listeners ─────────────────────────────────────────────────────────────
@@ -111,11 +217,11 @@ public class MainForm extends JFrame {
         taskList.addListSelectionListener(e -> {
             int idx = taskList.getSelectedIndex();
             if (idx != -1 && idx < taskManager.getDeadlineModel().getSize()) {
-                deadlineLabel.setText("Deadline : " + taskManager.getDeadline(idx));
-                categoryLabel.setText("Kategori : " + taskManager.getCategory(idx)); // Kategori
+                deadlineLabel.setText("📅 " + taskManager.getDeadline(idx));
+                categoryLabel.setText("🏷 " + taskManager.getCategory(idx));
             } else {
                 deadlineLabel.setText("");
-                categoryLabel.setText(""); // Jenis lah biar agak beda
+                categoryLabel.setText("");
             }
         });
 
@@ -132,10 +238,8 @@ public class MainForm extends JFrame {
     private void onTambah() {
         JTextField inputKegiatan = new JTextField();
         JTextField inputDeadline = new JTextField();
-        // JPanel panel = UIComponents.createAddTaskPanel(inputKegiatan, inputDeadline);
-        // Nambahin buat kategori ye
-        JComboBox<String> kategoriBox = UIComponents.createCategoryComboBox();  
-        JPanel panel = new JPanel(new java.awt.GridLayout(3, 2, 5, 5));
+        JComboBox<String> kategoriBox = UIComponents.createCategoryComboBox();
+        JPanel panel = new JPanel(new GridLayout(3, 2, 5, 5));
         panel.add(new JLabel("Nama Kegiatan:"));
         panel.add(inputKegiatan);
         panel.add(new JLabel("Deadline (dd/MM/yyyy):"));
@@ -161,7 +265,6 @@ public class MainForm extends JFrame {
         String parsedDeadline = parseDeadline(deadlineInput);
         if (parsedDeadline == null) return;
 
-        // taskManager.addTask(kegiatan, parsedDeadline);
         String kategori = (String) kategoriBox.getSelectedItem();
         taskManager.addTask(kegiatan, parsedDeadline, kategori);
         fileManager.saveAll();
@@ -180,7 +283,7 @@ public class MainForm extends JFrame {
         taskManager.removeTask(index);
         fileManager.saveAll();
         deadlineLabel.setText("");
-        categoryLabel.setText(""); // Hapus kategori
+        categoryLabel.setText("");
     }
 
     private void onEdit() {
@@ -195,7 +298,7 @@ public class MainForm extends JFrame {
 
         String currentTask     = taskManager.getTask(index);
         String currentDeadline = taskManager.getDeadline(index);
-        String currentCategory = taskManager.getCategory(index); // Kategori lagii
+        String currentCategory = taskManager.getCategory(index);
 
         String newTask = JOptionPane.showInputDialog(this, "Edit tugas:", currentTask);
         if (newTask == null || newTask.trim().isEmpty()) return;
@@ -207,21 +310,20 @@ public class MainForm extends JFrame {
         String parsedDeadline = parseDeadline(newDeadlineInput.trim());
         if (parsedDeadline == null) return;
 
-        // Dialog Kategori
         JComboBox<String> kategoriBox = UIComponents.createCategoryComboBox();
         kategoriBox.setSelectedItem(currentCategory);
 
         int resultKategori = JOptionPane.showConfirmDialog(
                 this, kategoriBox, "Pilih Kategori",
                 JOptionPane.OK_CANCEL_OPTION);
-        
+
         if (resultKategori != JOptionPane.OK_OPTION) return;
-        
-        String newCategory = (String) kategoriBox.getSelectedItem();    
+
+        String newCategory = (String) kategoriBox.getSelectedItem();
 
         taskManager.editTask(index, newTask.trim(), parsedDeadline, newCategory);
-        deadlineLabel.setText("Deadline : " + parsedDeadline);
-        categoryLabel.setText("Kategori : " + newCategory);
+        deadlineLabel.setText("📅 " + parsedDeadline);
+        categoryLabel.setText("🏷 " + newCategory);
         fileManager.saveAll();
     }
 
@@ -241,12 +343,6 @@ public class MainForm extends JFrame {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    /**
-     * Validates and parses a deadline string.
-     *
-     * @param input raw string from user (expected dd/MM/yyyy)
-     * @return formatted date string, or {@code null} if invalid
-     */
     private String parseDeadline(String input) {
         try {
             LocalDate date = LocalDate.parse(input, DATE_FORMAT);
@@ -288,6 +384,6 @@ public class MainForm extends JFrame {
             // Fall back to default L&F silently
         }
 
-        java.awt.EventQueue.invokeLater(() -> new MainForm().setVisible(true));
+        java.awt.EventQueue.invokeLater(() -> new MainForm("user").setVisible(true));
     }
 }

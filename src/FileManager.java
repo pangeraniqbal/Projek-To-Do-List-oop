@@ -11,14 +11,31 @@ import javax.swing.JOptionPane;
  */
 public class FileManager {
 
-    private static final String TASK_FILE     = "data-tugas.txt";
-    private static final String DEADLINE_FILE = "deadline.txt";
-    private static final String CATEGORY_FILE = "kategori.txt";
+    // Per-user file names (instance fields)
+    private final String TASK_FILE;
+    private final String DEADLINE_FILE;
+    private final String CATEGORY_FILE;
 
     private final TaskManager taskManager;
 
-    public FileManager(TaskManager taskManager) {
+    /**
+     * Create a FileManager bound to a specific username. Files will be named
+     * using a sanitized username prefix to avoid clashing between users.
+     */
+    public FileManager(TaskManager taskManager, String username) {
         this.taskManager = taskManager;
+        String safe = sanitizeUsername(username);
+        this.TASK_FILE = safe + "-tasks.txt";
+        this.DEADLINE_FILE = safe + "-deadlines.txt";
+        this.CATEGORY_FILE = safe + "-categories.txt";
+    }
+
+    /**
+     * Backward-compatible constructor that uses a default single-user filename.
+     * Prefer the constructor with username when integrating with LoginForm.
+     */
+    public FileManager(TaskManager taskManager) {
+        this(taskManager, "user");
     }
 
     /** Load task names from file into the task model. */
@@ -116,5 +133,11 @@ public class FileManager {
 
     private void showError(String message) {
         JOptionPane.showMessageDialog(null, message, "Error", JOptionPane.ERROR_MESSAGE);
+    }
+
+    private String sanitizeUsername(String username) {
+        if (username == null) return "user";
+        // replace any non-alphanumeric char with underscore
+        return username.trim().replaceAll("[^A-Za-z0-9]", "_");
     }
 }
